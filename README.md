@@ -13,8 +13,7 @@ An MCP server that provides Google search capabilities, web content extraction, 
 
 ## Prerequisites
 
-- Node.js v16 or higher
-- Bun runtime
+- Bun runtime v1.0 or higher
 - Google API credentials (API key and Search Engine ID)
 
 ## Installation
@@ -149,7 +148,7 @@ Using the MCP Inspector:
 
 ```bash
 # Install MCP Inspector
-npm install -g @modelcontextprotocol/inspector
+bun install -g @modelcontextprotocol/inspector
 
 # Run the server with the inspector
 bun start | mcp-inspector
