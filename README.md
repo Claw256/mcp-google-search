@@ -21,6 +21,9 @@ An MCP server that provides Google search capabilities, web content extraction, 
 ```bash
 # Install dependencies
 bun install
+
+# Build the TypeScript files
+bun run build
 ```
 
 ## Configuration
@@ -79,17 +82,34 @@ This server uses rebrowser-puppeteer to avoid bot detection:
    - Uses optimized Chrome arguments
    - Configures viewport and window settings
 
-## Running the Server
+## Using with Claude Desktop
 
-The server uses stdio transport as specified in the MCP protocol. To run:
+1. Make sure you have Claude Desktop installed and updated to the latest version
+2. Open your Claude Desktop configuration file:
+   - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-```bash
-# Build the TypeScript files
-bun run build
+3. Add the server configuration:
 
-# Start the server
-bun start
+```json
+{
+  "mcpServers": {
+    "google-search": {
+      "command": "bun",
+      "args": [
+        "--directory",
+        "/ABSOLUTE/PATH/TO/google_search_mcp",
+        "start"
+      ]
+    }
+  }
+}
 ```
+
+Replace `/ABSOLUTE/PATH/TO/google_search_mcp` with the absolute path to your server directory.
+
+4. Restart Claude Desktop
+5. Look for the hammer icon ![](https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-hammer-icon.svg) to confirm the tools are available
 
 ## Available Tools
 
@@ -142,30 +162,25 @@ bun start
 }
 ```
 
-## Example Usage
+## Troubleshooting
 
-Using the MCP Inspector:
+### Claude Desktop Integration Issues
 
-```bash
-# Install MCP Inspector
-bun install -g @modelcontextprotocol/inspector
+1. Check the logs:
+   ```bash
+   # MacOS/Linux
+   tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+   
+   # Windows
+   type %APPDATA%\Claude\Logs\mcp*.log
+   ```
 
-# Run the server with the inspector
-bun start | mcp-inspector
-```
+2. Common issues:
+   - Server not showing up: Check configuration file syntax and paths
+   - Tool calls failing: Check server logs and restart Claude Desktop
+   - Path issues: Ensure you're using absolute paths
 
-Example commands in the inspector:
-
-```
-# Search for something
-/tool search {"query": "TypeScript best practices", "resultCount": 5}
-
-# Extract content from a URL
-/tool extract {"url": "https://example.com", "includeImages": true}
-
-# Take a screenshot
-/tool screenshot {"url": "https://example.com", "format": "jpeg", "quality": 80}
-```
+For more detailed troubleshooting, refer to the [MCP debugging guide](https://modelcontextprotocol.io/docs/tools/debugging).
 
 ## Development
 
