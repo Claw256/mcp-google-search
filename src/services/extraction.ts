@@ -9,6 +9,20 @@ import { browserPool } from '../infrastructure/connection-pool';
 import { extractionCache } from '../infrastructure/cache-manager';
 import { extractionRateLimiter } from '../infrastructure/rate-limiter';
 import { screenshotService } from './screenshot';
+import { getStealthScript } from '../utils/stealth-scripts';
+import { getBrowserLaunchOptions } from '../utils/browser-config';
+import { existsSync, readFileSync } from 'fs';
+
+interface Cookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: 'Strict' | 'Lax' | 'None';
+}
 
 class ExtractionService {
   private readonly turndown: TurndownService;
@@ -54,50 +68,97 @@ class ExtractionService {
     });
   }
 
+  private async loadCookies(page: Page, url: string): Promise<void> {
+    const cookiesPath = process.env['BROWSER_COOKIES_PATH'];
+    if (!cookiesPath || !existsSync(cookiesPath)) {
+      return;
+    }
 
+    try {
+      const cookiesJson = readFileSync(cookiesPath, 'utf-8');
+      const cookies = JSON.parse(cookiesJson) as Cookie[];
+      
+      // Filter cookies based on the domain
+      const urlObj = new URL(url);
+      const relevantCookies = cookies.filter(cookie => {
+        const cookieDomain = cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain;
+        return urlObj.hostname.endsWith(cookieDomain);
+      });
 
-  private async setupPage(page: Page): Promise<void> {
+      if (relevantCookies.length > 0) {
+        await page.setCookie(...relevantCookies);
+        logger.debug(`Loaded ${relevantCookies.length} cookies for ${urlObj.hostname}`);
+      }
+    } catch (error) {
+      logger.error('Error loading cookies:', error instanceof Error ? error : { message: String(error) });
+    }
+  }
+
+  private getHeaders(url: string): Record<string, string> {
+    const urlObj = new URL(url);
+    const headers: Record<string, string> = {
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not=A?Brand";v="24"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Upgrade-Insecure-Requests': '1',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.87 Safari/537.36',
+      'Referer': `${urlObj.protocol}//${urlObj.hostname}`,
+      'Origin': `${urlObj.protocol}//${urlObj.hostname}`,
+      'sec-fetch-site': 'same-origin',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-user': '?1',
+      'sec-fetch-dest': 'document'
+    };
+
+    // Add Reddit-specific headers
+    if (urlObj.hostname.includes('reddit.com')) {
+      headers['x-reddit-loid'] = '';  // Will be set by cookies if available
+      headers['x-reddit-session'] = ''; // Will be set by cookies if available
+    }
+
+    return headers;
+  }
+
+  private async setupPage(page: Page, url: string): Promise<void> {
     await page.setJavaScriptEnabled(true);
     await page.setDefaultTimeout(60000);
     await page.setDefaultNavigationTimeout(60000);
 
-    await page.setViewport({
-      width: 1920,
-      height: 1080,
-      deviceScaleFactor: 1,
-      hasTouch: false,
-      isLandscape: true,
-      isMobile: false
-    });
+    const { defaultViewport } = getBrowserLaunchOptions();
+    await page.setViewport(defaultViewport);
+
+    // Load cookies first so they can influence headers
+    await this.loadCookies(page, url);
+
+    // Set headers
+    await page.setExtraHTTPHeaders(this.getHeaders(url));
 
     // Apply stealth scripts
-    await page.evaluateOnNewDocument(`
-      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [] });
-      Object.defineProperty(navigator, 'permissions', { value: { query: () => Promise.resolve({ state: 'prompt' }) } });
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      
-      window.chrome = {
-        runtime: {},
-        loadTimes: function(){},
-        csi: function(){},
-        app: {}
-      };
-      
-      Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
-      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-      
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: Notification.permission }) :
-          originalQuery(parameters)
-      );
-    `);
+    await page.evaluateOnNewDocument(getStealthScript());
+
+    // Add additional Reddit-specific scripts if needed
+    if (url.includes('reddit.com')) {
+      await page.evaluateOnNewDocument(`
+        // Override Reddit's bot detection functions
+        Object.defineProperty(window, 'botcheck', {
+          get: () => undefined,
+          set: () => {}
+        });
+        
+        // Disable Reddit's reCAPTCHA integration
+        Object.defineProperty(window, 'grecaptcha', {
+          get: () => ({
+            ready: (cb) => cb(),
+            execute: () => Promise.resolve('dummy-token')
+          })
+        });
+      `);
+    }
   }
 
   private async extractVideos(page: Page): Promise<VideoMetadata[]> {
-
     const videos = await page.evaluate(() => {
       const getAbsoluteUrl = (src: string) => new URL(src, window.location.href).href;
       
@@ -191,7 +252,7 @@ class ExtractionService {
         context = await browser.createBrowserContext();
         page = await context.newPage();
 
-        await this.setupPage(page);
+        await this.setupPage(page, params.url);
 
         // Add random delay before navigation
         await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
@@ -212,6 +273,17 @@ class ExtractionService {
 
         // Wait for content
         await page.waitForFunction(() => document.body !== null && document.readyState === 'complete');
+
+        // Additional wait for dynamic content
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Wait for any remaining network activity to settle
+        await page.waitForFunction(() => {
+          const loader = document.querySelector('.loading, .spinner, [aria-busy="true"]');
+          return !loader;
+        }, { timeout: 5000 }).catch(() => {
+          // Ignore timeout errors from the loader check
+        });
 
         const html = await page.content();
         const cleanedHtml = this.cleanContent(html);

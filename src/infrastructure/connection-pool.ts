@@ -1,6 +1,8 @@
 import type { Browser } from 'rebrowser-puppeteer';
 import puppeteer from 'rebrowser-puppeteer';
 import { logger } from './logger.js';
+import { getStealthScript } from '../utils/stealth-scripts';
+import { getBrowserLaunchOptions, getUserAgents } from '../utils/browser-config';
 
 class BrowserPool {
   private pool: Browser[] = [];
@@ -20,12 +22,7 @@ class BrowserPool {
   }
 
   private getRandomUserAgent(): string {
-    const userAgents = [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    ];
+    const userAgents = getUserAgents();
     return userAgents[Math.floor(Math.random() * userAgents.length)];
   }
 
@@ -52,36 +49,7 @@ class BrowserPool {
   }
 
   private async createBrowser(): Promise<Browser> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--disable-blink-features=AutomationControlled',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--hide-scrollbars',
-        '--mute-audio',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-site-isolation-trials'
-      ],
-      ignoreDefaultArgs: [
-        '--enable-automation',
-        '--enable-blink-features=IdleDetection'
-      ],
-      defaultViewport: {
-        width: 1920,
-        height: 1080,
-        deviceScaleFactor: 1,
-        hasTouch: false,
-        isLandscape: true,
-        isMobile: false
-      }
-    });
+    const browser = await puppeteer.launch(getBrowserLaunchOptions());
 
     // Create an incognito context for better isolation
     const context = await browser.createBrowserContext();
@@ -90,25 +58,8 @@ class BrowserPool {
     // Set a random user agent
     await page.setUserAgent(this.getRandomUserAgent());
 
-    // Enhanced stealth scripts
-    await page.evaluateOnNewDocument(`
-      // Override navigator properties
-      Object.defineProperties(navigator, {
-        webdriver: { get: () => undefined },
-        languages: { get: () => ['en-US', 'en'] },
-        permissions: { value: { query: async () => ({ state: 'prompt' }) } },
-        hardwareConcurrency: { get: () => 8 },
-        deviceMemory: { get: () => 8 }
-      });
-
-      // Override WebGL
-      const getParameter = WebGLRenderingContext.prototype.getParameter;
-      WebGLRenderingContext.prototype.getParameter = function(parameter) {
-        if (parameter === 37445) return 'Intel Open Source Technology Center';
-        if (parameter === 37446) return 'Mesa DRI Intel(R) HD Graphics (Skylake GT2)';
-        return getParameter.apply(this, [parameter]);
-      };
-    `);
+    // Apply stealth scripts
+    await page.evaluateOnNewDocument(getStealthScript());
 
     await page.close();
     await context.close();
