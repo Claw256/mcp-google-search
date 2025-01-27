@@ -38,31 +38,27 @@ class Logger {
 
   constructor() {
     const logLevel = process.env['LOG_LEVEL'] || 'info';
-    const logFormat = process.env['LOG_FORMAT'] || 'json';
+    const noColor = process.env['NO_COLOR'] === '1' || process.env['BUN_FORCE_COLOR'] === '0' || process.env['FORCE_COLOR'] === '0';
+
+    const consoleFormat = winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.align(),
+      noColor ? winston.format.uncolorize() : winston.format.colorize({ all: false, message: true }),
+      logFormat
+    );
 
     this.logger = winston.createLogger({
       level: logLevel,
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        logFormat === 'json' ? winston.format.json() : this.getTextFormat()
-      ),
       transports: [
         new winston.transports.Console({
-          format: winston.format.colorize({ all: true }),
+          format: consoleFormat,
+          stderrLevels: ['error', 'warn', 'info', 'debug'], // Write all logs to stderr
         }),
       ],
     });
 
     // Capture unhandled errors
     this.setupErrorHandling();
-  }
-
-  private getTextFormat(): winston.Logform.Format {
-    return winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.align(),
-      logFormat
-    );
   }
 
   private setupErrorHandling(): void {
