@@ -73,7 +73,11 @@ Add the server configuration to your MCP settings file:
         "REBROWSER_PATCHES_SOURCE_URL": "jquery.min.js",
         "REBROWSER_PATCHES_UTILITY_WORLD_NAME": "util",
         "REBROWSER_PATCHES_DEBUG": "0",
-        "BROWSER_COOKIES_PATH": "C:\\path\\to\\cookies.json"
+        "BROWSER_COOKIES_PATH": "C:\\path\\to\\cookies.json",
+        "LOG_LEVEL": "info",
+        "NO_COLOR": "0",
+        "BUN_FORCE_COLOR": "1",
+        "FORCE_COLOR": "1"
       }
     }
   }
@@ -81,6 +85,15 @@ Add the server configuration to your MCP settings file:
 ```
 
 Replace `/ABSOLUTE/PATH/TO/google_search_mcp` with the absolute path to your server directory.
+
+### Logging Configuration
+
+The following environment variables control logging behavior:
+
+- `LOG_LEVEL`: Sets the logging level (error, warn, info, debug). Default: info
+- `NO_COLOR`: Disables colored output when set to "1"
+- `BUN_FORCE_COLOR`: Controls colored output in Bun runtime (set to "0" to disable)
+- `FORCE_COLOR`: Controls colored output globally (set to "0" to disable)
 
 ## Bot Detection Avoidance
 
