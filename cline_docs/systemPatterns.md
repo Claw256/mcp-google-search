@@ -1,332 +1,163 @@
-# Google Search MCP - System Patterns
+# Google Search MCP - System Architecture Patterns
 
-## Architecture Overview
-
-### Service Layer
-```
-MCP Server
-    ├── Search Service
-    │   ├── Query Building
-    │   ├── Domain Filtering
-    │   ├── Result Processing
-    │   └── Error Handling
-    ├── Extraction Service
-    │   ├── Browser Fingerprinting
-    │   ├── Bot Detection Evasion
-    │   ├── Content Processing
-    │   └── Human Behavior Simulation
-    └── Screenshot Service
+## High-Level Architecture
+```mermaid
+graph TD
+    A[Client] --> B[API Gateway]
+    B --> C[Search Service]
+    B --> D[Extraction Service]
+    C --> E[Google CSE]
+    D --> F[Puppeteer Cluster]
+    C & D --> G[Cache Manager]
+    C & D --> H[Rate Limiter]
+    C & D --> I[Logger]
+    H --> J[Token Bucket Store]
+    G --> K[Memory Cache]
+    G --> L[Disk Cache]
 ```
 
-### Infrastructure Layer
-```
-Infrastructure
-    ├── Connection Pool
-    ├── Rate Limiter
-    ├── Cache Manager
-    └── Logger
-```
+## Core Architectural Patterns
 
-## Design Patterns
-
-### Singleton Pattern
-- Used for service instances
-- Ensures single source of truth
-- Manages shared resources
-- Example: Connection Pool, Cache Manager
-
-### Factory Pattern
-- Browser instance creation
-- Service initialization
-- Configuration management
-- Example: Screenshot Service creation
-
-### Observer Pattern
-- Cache events monitoring
-- Resource usage tracking
-- Error handling
-- Example: Logger event subscribers
-
-### Strategy Pattern
-- Content extraction strategies
-- Rate limiting algorithms
-- Cache storage methods
-- Example: Different screenshot capture modes
-
-### Proxy Pattern (Extraction Service)
-```typescript
-// Navigator proxy for bot detection evasion
-const handler = {
-  get(target: Navigator, prop: PropertyKey): any {
-    if (prop === 'webdriver') {
-      return false;
-    }
-    return target[prop];
-  },
-  getOwnPropertyDescriptor(target: Navigator, prop: PropertyKey): PropertyDescriptor | undefined {
-    if (prop === 'webdriver') {
-      return undefined;
-    }
-    return Object.getOwnPropertyDescriptor(target, prop);
-  },
-  ownKeys(target: Navigator): ArrayLike<string | symbol> {
-    return [];
-  },
-  has(target: Navigator, prop: PropertyKey): boolean {
-    if (prop === 'webdriver') {
-      return false;
-    }
-    return prop in target;
-  }
-};
-```
-
-### Builder Pattern (Search Service)
-```typescript
-class SearchOptionsBuilder {
-  private options: Record<string, unknown>;
-
-  constructor(baseQuery: string) {
-    this.options = { q: baseQuery };
-  }
-
-  withTrustedDomains(domains: string[]): this {
-    // Handle single vs multiple domains
-    if (domains.length === 1) {
-      this.options.siteSearch = domains[0];
-      this.options.siteSearchFilter = 'i';
-    } else if (domains.length > 1) {
-      const sites = domains.map(d => `site:${d}`).join(' OR ');
-      this.options.q = `${this.options.q} (${sites})`;
-    }
-    return this;
-  }
-
-  withDateRestriction(dateRestrict: string): this {
-    this.options.dateRestrict = dateRestrict;
-    return this;
-  }
-
-  withResultCount(count: number): this {
-    this.options.num = Math.min(Math.max(1, count), 10);
-    return this;
-  }
-
-  build(): Record<string, unknown> {
-    return this.options;
-  }
-}
-```
-
-## Core Principles
-
-### Resource Management
-1. Connection Pooling
-   - Reuse browser instances
-   - Limit concurrent connections
-   - Automatic cleanup
-   - Resource monitoring
-
-2. Rate Limiting
-   - Token bucket algorithm
-   - Per-service quotas
-   - Automatic recovery
-   - Request prioritization
-
-3. Caching
-   - Two-level caching
-   - TTL-based expiration
-   - Memory-aware eviction
-   - Stats monitoring
-
-### Error Handling
-
-1. Error Hierarchy
-```typescript
-BaseError
-    ├── SearchError
-    │   ├── RateLimitError
-    │   ├── InvalidQueryError
-    │   ├── ApiError
-    │   └── NetworkError
-    ├── ExtractionError
-    │   ├── BotDetectionError
-    │   ├── NavigationError
-    │   ├── TimeoutError
-    │   └── ContentError
-    └── ScreenshotError
-```
-
-2. Error Processing
-   - Type-safe error handling
-   - Detailed error information
-   - Stack trace preservation
-   - Error recovery strategies
-
-### Type Safety
-
-1. Type Definitions
-```typescript
-interface ExtractionParams {
-  url: string;
-  includeImages?: boolean;
-  includeVideos?: boolean;
-  preserveLinks?: boolean;
-  formatCode?: boolean;
-  screenshot?: {
-    fullPage?: boolean;
-    selector?: string;
-    format?: 'png' | 'jpeg' | 'webp';
-    quality?: number;
-  };
-}
-
-interface ExtractionResult {
-  markdown: string;
-  images: ImageMetadata[];
-  videos: VideoMetadata[];
-  metadata: PageMetadata;
-  screenshot?: Buffer;
-}
-```
-
-2. Validation
-   - Runtime type checking
-   - Input sanitization
-   - Parameter validation
-   - Output formatting
-
-## Implementation Patterns
-
-### Service Implementation
-```typescript
-class ExtractionService {
-  private readonly turndown: TurndownService;
-  private readonly browserPool: BrowserPool;
-  private readonly cache: CacheManager;
-  private readonly rateLimiter: RateLimiter;
-
-  constructor() {
-    this.validateConfig();
-    this.initializeServices();
-  }
-
-  public async extract(params: ExtractionParams): Promise<ExtractionResult> {
-    this.validateParams(params);
-    await this.checkRateLimit(params);
+### 1. Layered Defense Against Bot Detection
+```mermaid
+sequenceDiagram
+    participant ExtractionService
+    participant BrowserInstance
+    participant TargetSite
     
-    const cached = this.getFromCache(params);
-    if (cached) return cached;
+    ExtractionService->>BrowserInstance: Apply runtime patches
+    BrowserInstance->>TargetSite: Load page with spoofed fingerprint
+    TargetSite-->>BrowserInstance: Challenge detection
+    BrowserInstance->>ExtractionService: Simulate human behavior patterns
+    ExtractionService->>TargetSite: Randomized interaction sequence
+```
 
-    const result = await this.executeExtraction(params);
-    this.cacheResult(params, result);
+Components:
+- **Navigator Proxy**: Masks browser properties using JS Proxy
+- **Fingerprint Rotator**: Cycles hardware/profile attributes
+- **Behavior Simulator**: Generates human-like interaction patterns
+
+### 2. Connection Pooling Architecture
+**Key characteristics:**
+- Browser-as-a-Service pattern
+- Warm instance maintenance
+- Context isolation using utility worlds
+- Leak-proof resource handling
+
+```typescript
+interface ConnectionPool {
+  maxInstances: number
+  acquisitionTimeout: number
+  recyclingStrategy: 'aggressive' | 'conservative'
+  instanceHealthCheck: (browser: Browser) => boolean
+}
+```
+
+### 3. Rate Limiting Implementation
+Token bucket algorithm with service-specific configurations:
+```mermaid
+graph LR
+    A[Request] --> B{Token Available?}
+    B -->|Yes| C[Process Request]
+    B -->|No| D[Queue/Reject]
+    C --> E[Update Service Metrics]
+    D --> F[Return 429]
     
-    return result;
-  }
+    G[Token Refiller] --> B
+```
 
-  private async executeExtraction(params: ExtractionParams): Promise<ExtractionResult> {
-    const browser = await this.browserPool.acquire();
-    try {
-      const page = await browser.newPage();
-      await this.configurePage(page);
-      await this.simulateHumanBehavior(page);
-      return await this.processPage(page, params);
-    } finally {
-      await this.browserPool.release(browser);
+### 4. Cache Stratification
+Multi-layer caching strategy:
+1. **Memory Cache** (LRU, 1s TTL)
+2. **Disk Cache** (SSD-optimized, 1h TTL)
+3. **Search API Cache** (Google-compliant, 24h TTL)
+
+### 5. Error Recovery Flow
+```mermaid
+stateDiagram-v2
+    [*] --> NormalOperation
+    NormalOperation --> RateLimitExceeded: 429
+    NormalOperation --> BrowserCrash: ECONNRESET
+    RateLimitExceeded --> CoolDown: Wait 60s
+    CoolDown --> NormalOperation
+    BrowserCrash --> Cleanup: Release resources
+    Cleanup --> NormalOperation
+```
+
+## Cross-Cutting Concerns
+
+### 1. Browser Fingerprint Management
+```mermaid
+classDiagram
+    class FingerprintManager {
+        +generateFingerprint(): Fingerprint
+        +rotate(): void
+        +getCurrent(): Fingerprint
     }
-  }
-}
+    
+    class Fingerprint {
+        -userAgent: string
+        -platform: string
+        -deviceMemory: number
+        -hardwareConcurrency: number
+        -plugins: PluginArray
+    }
 ```
 
-### Resource Management
-```typescript
-class ResourceManager {
-  // Resource pool
-  private resources: Resource[]
+### 2. Human Behavior Simulation
+Component | Responsibility | Implementation
+---|---|---
+MovementGenerator | Mouse path simulation | Bezier curves with random deviation
+ScrollPattern | Page scrolling behavior | Randomized acceleration profiles
+TimingProfile | Action timing patterns | Erlang-distributed delays
 
-  // Acquisition
-  public async acquire(): Promise<Resource>
+## Recent Architecture Updates
 
-  // Release
-  public release(resource: Resource): void
+### 1. Enhanced Navigator Proxy
+- Property masking using ES6 Proxy
+- Dynamic userAgent rotation
+- Plugin array simulation
+- WebGL fingerprint spoofing
 
-  // Cleanup
-  public async cleanup(): Promise<void>
-}
+### 2. Connection Pool Improvements
+- Instance health monitoring
+- Memory usage thresholds
+- Automated cleanup cycles
+- Context isolation strategies
+
+### 3. Cache-RateLimit-Pooling Triad
+Synchronized operation between core infrastructure components:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant RateLimiter
+    participant Cache
+    participant Pool
+    
+    Client->>RateLimiter: Check quota
+    RateLimiter->>Cache: Validate cached response
+    alt Cache hit
+        Cache-->>Client: Return cached
+    else Cache miss
+        RateLimiter->>Pool: Acquire browser
+        Pool->>Client: Process request
+        Client->>Cache: Store result
+    end
 ```
 
-### Caching Strategy
-```typescript
-class CacheManager {
-  // Cache configuration
-  private config: CacheConfig
+## Architectural Decisions
 
-  // Cache operations
-  public get<T>(key: string): T | undefined
-  public set<T>(key: string, value: T): boolean
-  public del(key: string): void
+1. **Browser Isolation Strategy**
+- Decision: Use separate browser instances per request context
+- Rationale: Prevents cookie/state leakage between sessions
+- Tradeoff: Higher memory usage vs improved security
 
-  // Monitoring
-  public getStats(): CacheStats
-}
-```
+2. **Cache Invalidation Approach**  
+- Decision: TTL-based with query normalization
+- Rationale: Balances freshness with performance
+- Tradeoff: Potential stale results vs reduced API calls
 
-## Communication Patterns
-
-### Event-Based
-- Cache eviction events
-- Resource usage notifications
-- Error broadcasts
-- Status updates
-
-### Promise-Based
-- Async operations
-- Resource acquisition
-- Error handling
-- Cleanup procedures
-
-### Stream-Based
-- Content extraction
-- Screenshot capture
-- Log processing
-- Resource monitoring
-
-## Testing Patterns
-
-### Unit Testing
-- Service isolation
-- Dependency mocking
-- Error simulation
-- Type verification
-
-### Integration Testing
-- Service interaction
-- Resource management
-- Error propagation
-- Performance metrics
-
-### Performance Testing
-- Load simulation
-- Resource monitoring
-- Bottleneck detection
-- Optimization validation
-
-## Monitoring Patterns
-
-### Metrics Collection
-- Request tracking
-- Resource usage
-- Error rates
-- Performance timing
-
-### Logging Strategy
-- Structured logging
-- Context preservation
-- Error tracking
-- Performance monitoring
-
-### Resource Tracking
-- Memory usage
-- Connection pool
-- Cache utilization
-- Rate limit status
+3. **Human Behavior Simulation**  
+- Decision: Client-side pattern generation
+- Rationale: Avoids detectable timing patterns
+- Tradeoff: Increased complexity vs better evasion
