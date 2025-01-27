@@ -28,37 +28,59 @@ bun run build
 
 ## Configuration
 
-Create a `.env` file in the root directory with the following variables:
+### Cookie Setup
 
-```env
-# Google API Configuration
-GOOGLE_API_KEY=your_api_key
-GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id
+For authenticated site access, you'll need to:
 
-# Resource Limits
-MAX_CONCURRENT_BROWSERS=3
-BROWSER_TIMEOUT=30000
+1. Install the [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) Chrome extension
+2. Visit the sites you want to authenticate with and log in
+3. Use the extension to export your cookies in JSON format
+4. Store the exported cookies file in a secure location
+5. Set the `BROWSER_COOKIES_PATH` environment variable to the absolute path of your cookies file
 
-# Rate Limiting
-RATE_LIMIT_WINDOW=60000
-RATE_LIMIT_MAX_REQUESTS=60
+### MCP Server Configuration
 
-# Cache Settings
-SEARCH_CACHE_TTL=3600
-EXTRACT_CACHE_TTL=7200
-MAX_CACHE_ITEMS=1000
+Add the server configuration to your MCP settings file:
 
-# Browser Pool Configuration
-BROWSER_POOL_MIN=1
-BROWSER_POOL_MAX=5
-BROWSER_POOL_IDLE_TIMEOUT=30000
+- For Cline: `%APPDATA%\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\cline_mcp_settings.json`
+- For Claude Desktop:
+  - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
+  - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-# Bot Detection Avoidance
-REBROWSER_PATCHES_RUNTIME_FIX_MODE=addBinding
-REBROWSER_PATCHES_SOURCE_URL=jquery.min.js
-REBROWSER_PATCHES_UTILITY_WORLD_NAME=util
-REBROWSER_PATCHES_DEBUG=0
+```json
+{
+  "mcpServers": {
+    "google-search": {
+      "command": "bun",
+      "args": [
+        "run",
+        "/ABSOLUTE/PATH/TO/google_search_mcp/dist/index.js"
+      ],
+      "env": {
+        "GOOGLE_API_KEY": "your_api_key",
+        "GOOGLE_SEARCH_ENGINE_ID": "your_search_engine_id",
+        "MAX_CONCURRENT_BROWSERS": "3",
+        "BROWSER_TIMEOUT": "30000",
+        "RATE_LIMIT_WINDOW": "60000",
+        "RATE_LIMIT_MAX_REQUESTS": "60",
+        "SEARCH_CACHE_TTL": "3600",
+        "EXTRACT_CACHE_TTL": "7200",
+        "MAX_CACHE_ITEMS": "1000",
+        "BROWSER_POOL_MIN": "1",
+        "BROWSER_POOL_MAX": "5",
+        "BROWSER_POOL_IDLE_TIMEOUT": "30000",
+        "REBROWSER_PATCHES_RUNTIME_FIX_MODE": "addBinding",
+        "REBROWSER_PATCHES_SOURCE_URL": "jquery.min.js",
+        "REBROWSER_PATCHES_UTILITY_WORLD_NAME": "util",
+        "REBROWSER_PATCHES_DEBUG": "0",
+        "BROWSER_COOKIES_PATH": "C:\\path\\to\\cookies.json"
+      }
+    }
+  }
+}
 ```
+
+Replace `/ABSOLUTE/PATH/TO/google_search_mcp` with the absolute path to your server directory.
 
 ## Bot Detection Avoidance
 
@@ -89,24 +111,7 @@ This server uses rebrowser-puppeteer to avoid bot detection:
    - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-3. Add the server configuration:
-
-```json
-{
-  "mcpServers": {
-    "google-search": {
-      "command": "bun",
-      "args": [
-        "--directory",
-        "/ABSOLUTE/PATH/TO/google_search_mcp",
-        "start"
-      ]
-    }
-  }
-}
-```
-
-Replace `/ABSOLUTE/PATH/TO/google_search_mcp` with the absolute path to your server directory.
+3. Add the server configuration as shown in the [Configuration](#configuration) section above.
 
 4. Restart Claude Desktop
 5. Look for the hammer icon ![](https://mintlify.s3.us-west-1.amazonaws.com/mcp/images/claude-desktop-mcp-hammer-icon.svg) to confirm the tools are available
@@ -186,10 +191,10 @@ For more detailed troubleshooting, refer to the [MCP debugging guide](https://mo
 
 ```bash
 # Run in development mode with watch
-bun run dev
+bun --watch run dev
 
 # Run tests
-bun test
+bun run test
 
 # Run linter
 bun run lint
