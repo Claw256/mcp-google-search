@@ -1,11 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { logger } from '../infrastructure/logger.js';
 import { browserPool } from '../infrastructure/connection-pool.js';
 import { searchService } from '../services/search.js';
 import { extractionService } from '../services/extraction.js';
-import { screenshotService } from '../services/screenshot.js';
-
 class GoogleSearchMcpServer {
   private server: McpServer;
   private isShuttingDown: boolean;
@@ -95,42 +94,9 @@ class GoogleSearchMcpServer {
       }
     );
 
-    // Screenshot tool
-    this.server.tool(
-      'screenshot',
-      {
-        url: z.string().describe('URL to capture'),
-        fullPage: z.boolean().optional().describe('Capture full page'),
-        selector: z.string().optional().describe('CSS selector for element capture'),
-        format: z.enum(['png', 'jpeg', 'webp']).optional().describe('Image format'),
-        quality: z.number().min(1).max(100).optional().describe('Image quality'),
-      },
-      async (params) => {
-        if (this.isShuttingDown) {
-          return {
-            content: [{ type: 'text', text: 'Server is shutting down' }],
-            isError: true,
-          };
-        }
-
-        try {
-          const { url, ...options } = params;
-          const results = await screenshotService.capture(url, options);
-          return {
-            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
-          };
-        } catch (error) {
-          logger.error('Screenshot error:', error instanceof Error ? error : { message: String(error) });
-          return {
-            content: [{ type: 'text', text: error instanceof Error ? error.message : 'Unknown error' }],
-            isError: true,
-          };
-        }
-      }
-    );
   }
 
-  public async start(transport: any): Promise<void> {
+  public async start(transport: StdioServerTransport): Promise<void> {
     try {
       // Initialize browser pool
       await browserPool.initialize();

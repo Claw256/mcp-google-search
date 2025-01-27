@@ -36,7 +36,6 @@ async function main(): Promise<void> {
     logger.info('Available tools:');
     logger.info('- search: Perform Google Custom Search with advanced filtering');
     logger.info('- extract: Extract and process content from webpages');
-    logger.info('- screenshot: Capture webpage screenshots');
 
   } catch (error) {
     logger.error('Failed to start server:', error instanceof Error ? error : { message: String(error) });

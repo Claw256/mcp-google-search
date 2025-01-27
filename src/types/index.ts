@@ -58,7 +58,7 @@ export interface PageMetadata {
 }
 
 export interface ScreenshotData {
-  buffer: Buffer | Uint8Array;
+  buffer: string; // base64 encoded image data
   metadata: {
     width: number;
     height: number;
