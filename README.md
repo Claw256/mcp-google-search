@@ -1,5 +1,7 @@
 # Google Search MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@Claw256/mcp-google-search)](https://smithery.ai/server/@Claw256/mcp-google-search)
+
 An MCP server that provides Google search capabilities, web content extraction, and screenshot functionality with advanced bot detection avoidance.
 
 ## Features
@@ -18,6 +20,15 @@ An MCP server that provides Google search capabilities, web content extraction, 
 
 ## Installation
 
+### Installing via Smithery
+
+To install Google Search for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Claw256/mcp-google-search):
+
+```bash
+npx -y @smithery/cli install @Claw256/mcp-google-search --client claude
+```
+
+### Manual Installation
 ```bash
 # Install dependencies
 bun install
