@@ -1,0 +1,25 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - googleApiKey
+      - googleSearchEngineId
+      - browserCookiesPath
+    properties:
+      googleApiKey:
+        type: string
+        description: The API key for the Google Custom Search.
+      googleSearchEngineId:
+        type: string
+        description: The Search Engine ID for Google Custom Search.
+      browserCookiesPath:
+        type: string
+        description: Path to the cookies JSON file for authenticated site access.
+  commandFunction:
+    # A function that produces the CLI command to start the MCP on stdio.
+    |-
+    config => ({ command: 'bun', args: ['run', 'dist/index.js'], env: { GOOGLE_API_KEY: config.googleApiKey, GOOGLE_SEARCH_ENGINE_ID: config.googleSearchEngineId, BROWSER_COOKIES_PATH: config.browserCookiesPath } })

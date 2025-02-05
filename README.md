@@ -1,5 +1,7 @@
 # Web Search MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@Claw256/mcp-web-search)](https://smithery.ai/server/@Claw256/mcp-web-search)
+
 An MCP server that provides Google search capabilities and web content viewing with advanced bot detection avoidance.
 
 ## Features
@@ -17,6 +19,15 @@ An MCP server that provides Google search capabilities and web content viewing w
 
 ## Installation
 
+### Installing via Smithery
+
+To install Web Search Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Claw256/mcp-web-search):
+
+```bash
+npx -y @smithery/cli install @Claw256/mcp-web-search --client claude
+```
+
+### Manual Installation
 ```bash
 # Install dependencies
 bun install
