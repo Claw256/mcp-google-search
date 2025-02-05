@@ -17,20 +17,12 @@ export interface SearchResult {
 }
 
 // Content Extraction Types
-export interface ScreenshotOptions {
-  fullPage?: boolean;
-  selector?: string;
-  format?: 'png' | 'jpeg' | 'webp';
-  quality?: number;
-}
-
 export interface ExtractionParams {
   url: string;
   includeImages?: boolean;
   includeVideos?: boolean;
   preserveLinks?: boolean;
   formatCode?: boolean;
-  screenshot?: ScreenshotOptions;
 }
 
 export interface ImageMetadata {
@@ -57,22 +49,12 @@ export interface PageMetadata {
   keywords?: string[];
 }
 
-export interface ScreenshotData {
-  buffer: string; // base64 encoded image data
-  metadata: {
-    width: number;
-    height: number;
-    format: string;
-    size: number;
-  };
-}
 
 export interface ExtractionResult {
   markdown: string;
   images: ImageMetadata[];
   videos: VideoMetadata[];
   metadata: PageMetadata;
-  screenshot?: ScreenshotData;
 }
 
 // Error Types

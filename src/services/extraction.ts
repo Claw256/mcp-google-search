@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { Browser, Page } from 'rebrowser-puppeteer';
 import TurndownService from 'turndown';
-import type { ExtractionParams, ExtractionResult, ImageMetadata, VideoMetadata, PageMetadata, ScreenshotData, ScreenshotOptions } from '../types';
+import type { ExtractionParams, ExtractionResult, ImageMetadata, VideoMetadata, PageMetadata } from '../types';
 import { ExtractionError, RateLimitError } from '../types';
 import { logger } from '../infrastructure/logger';
 import { load } from 'cheerio';
@@ -11,7 +11,7 @@ import { extractionRateLimiter } from '../infrastructure/rate-limiter';
 import { getStealthScript } from '../utils/stealth-scripts';
 import { getBrowserLaunchOptions } from '../utils/browser-config';
 import { existsSync, readFileSync } from 'fs';
-import sharp from 'sharp';
+
 
 interface Cookie {
   name: string;
@@ -301,10 +301,7 @@ class ExtractionService {
           this.extractMetadata(page),
         ]);
 
-        const screenshot = params.screenshot ?
-          await this.captureScreenshot(page, params.screenshot) : undefined;
-
-        const result = { markdown, images, videos, metadata, screenshot };
+        const result = { markdown, images, videos, metadata };
         extractionCache.set(cacheKey, result);
 
         return result;
@@ -365,36 +362,6 @@ class ExtractionService {
     throw new ExtractionError('Maximum retry attempts exceeded');
   }
 
-  private async captureScreenshot(page: Page, options: ScreenshotOptions): Promise<ScreenshotData> {
-    const screenshotOptions: Parameters<Page['screenshot']>[0] = {
-      type: options.format || 'jpeg',
-      quality: options.format === 'jpeg' ? (options.quality || 80) : undefined,
-      fullPage: options.fullPage || false,
-    };
-
-    let element = null;
-    if (options.selector) {
-      element = await page.$(options.selector);
-      if (!element) {
-        throw new ExtractionError(`Element with selector "${options.selector}" not found`);
-      }
-    }
-
-    const buffer = await (element || page).screenshot(screenshotOptions);
-    
-    // Use sharp to get image metadata
-    const metadata = await sharp(buffer).metadata();
-    
-    return {
-      buffer: Buffer.from(buffer).toString('base64'),
-      metadata: {
-        width: metadata.width || 0,
-        height: metadata.height || 0,
-        format: metadata.format || 'jpeg',
-        size: buffer.length
-      }
-    };
-  }
 
   private async extractImages(page: Page): Promise<ImageMetadata[]> {
     const patterns = this.EXCLUDED_IMAGE_PATTERNS.map(p => p.source);

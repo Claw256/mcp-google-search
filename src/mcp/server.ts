@@ -63,13 +63,7 @@ class GoogleSearchMcpServer {
         includeImages: z.boolean().optional().describe('Include image metadata'),
         includeVideos: z.boolean().optional().describe('Include video metadata'),
         preserveLinks: z.boolean().optional().describe('Preserve links in markdown'),
-        formatCode: z.boolean().optional().describe('Format code blocks'),
-        screenshot: z.object({
-          fullPage: z.boolean().optional().describe('Capture full page'),
-          selector: z.string().optional().describe('CSS selector for element capture'),
-          format: z.enum(['png', 'jpeg', 'webp']).optional().describe('Image format'),
-          quality: z.number().min(1).max(100).optional().describe('Image quality'),
-        }).optional().describe('Screenshot options'),
+        formatCode: z.boolean().optional().describe('Format code blocks')
       },
       async (params) => {
         if (this.isShuttingDown) {
