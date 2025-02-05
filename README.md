@@ -1,12 +1,11 @@
 # Google Search MCP Server
 
-An MCP server that provides Google search capabilities, web content extraction, and screenshot functionality with advanced bot detection avoidance.
+An MCP server that provides Google search capabilities and web content extraction with advanced bot detection avoidance.
 
 ## Features
 
 - Google Custom Search with advanced filtering
 - Web content extraction with markdown conversion
-- Screenshot capture with format options
 - Rate limiting and caching
 - Browser instance pooling
 - Bot detection avoidance using rebrowser-puppeteer
@@ -156,26 +155,6 @@ This server uses rebrowser-puppeteer to avoid bot detection:
     includeVideos?: boolean;
     preserveLinks?: boolean;
     formatCode?: boolean;
-    screenshot?: {
-      fullPage?: boolean;
-      selector?: string;
-      format?: 'png' | 'jpeg' | 'webp';
-      quality?: number;
-    }
-  }
-}
-```
-
-### 3. Screenshot Tool
-```typescript
-{
-  name: "screenshot",
-  params: {
-    url: string;
-    fullPage?: boolean;
-    selector?: string;
-    format?: 'png' | 'jpeg' | 'webp';
-    quality?: number;
   }
 }
 ```
