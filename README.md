@@ -1,11 +1,11 @@
-# Google Search MCP Server
+# Web Search MCP Server
 
-An MCP server that provides Google search capabilities and web content extraction with advanced bot detection avoidance.
+An MCP server that provides Google search capabilities and web content viewing with advanced bot detection avoidance.
 
 ## Features
 
 - Google Custom Search with advanced filtering
-- Web content extraction with markdown conversion
+- Web content viewing with markdown conversion
 - Rate limiting and caching
 - Browser instance pooling
 - Bot detection avoidance using rebrowser-puppeteer
@@ -49,11 +49,11 @@ Add the server configuration to your MCP settings file:
 ```json
 {
   "mcpServers": {
-    "google-search": {
+    "web-search": {
       "command": "bun",
       "args": [
         "run",
-        "/ABSOLUTE/PATH/TO/google_search_mcp/dist/index.js"
+        "/ABSOLUTE/PATH/TO/web_search_mcp/dist/index.js"
       ],
       "env": {
         "GOOGLE_API_KEY": "your_api_key",
@@ -63,7 +63,7 @@ Add the server configuration to your MCP settings file:
         "RATE_LIMIT_WINDOW": "60000",
         "RATE_LIMIT_MAX_REQUESTS": "60",
         "SEARCH_CACHE_TTL": "3600",
-        "EXTRACT_CACHE_TTL": "7200",
+        "VIEW_URL_CACHE_TTL": "7200",
         "MAX_CACHE_ITEMS": "1000",
         "BROWSER_POOL_MIN": "1",
         "BROWSER_POOL_MAX": "5",
@@ -83,7 +83,7 @@ Add the server configuration to your MCP settings file:
 }
 ```
 
-Replace `/ABSOLUTE/PATH/TO/google_search_mcp` with the absolute path to your server directory.
+Replace `/ABSOLUTE/PATH/TO/web_search_mcp` with the absolute path to your server directory.
 
 ### Logging Configuration
 
@@ -145,10 +145,10 @@ This server uses rebrowser-puppeteer to avoid bot detection:
 }
 ```
 
-### 2. Extract Tool
+### 2. View URL Tool
 ```typescript
 {
-  name: "extract",
+  name: "view_url",
   params: {
     url: string;
     includeImages?: boolean;
