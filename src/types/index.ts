@@ -17,7 +17,7 @@ export interface SearchResult {
 }
 
 // Content Extraction Types
-export interface ExtractionParams {
+export interface ViewUrlParams {
   url: string;
   includeImages?: boolean;
   includeVideos?: boolean;
@@ -50,7 +50,7 @@ export interface PageMetadata {
 }
 
 
-export interface ExtractionResult {
+export interface ViewUrlResult {
   markdown: string;
   images: ImageMetadata[];
   videos: VideoMetadata[];
@@ -76,8 +76,8 @@ export class SearchError extends BaseError {
   }
 }
 
-export class ExtractionError extends BaseError {
-  constructor(message: string, code: string = 'EXTRACTION_ERROR', statusCode: number = 500) {
+export class ViewUrlError extends BaseError {
+  constructor(message: string, code: string = 'VIEW_URL_ERROR', statusCode: number = 500) {
     super(message, code, statusCode);
   }
 }

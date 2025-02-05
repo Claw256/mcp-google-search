@@ -4,14 +4,15 @@ import { z } from 'zod';
 import { logger } from '../infrastructure/logger.js';
 import { browserPool } from '../infrastructure/connection-pool.js';
 import { searchService } from '../services/search.js';
-import { extractionService } from '../services/extraction.js';
-class GoogleSearchMcpServer {
+import { viewUrlService } from '../services/view-url.js';
+
+class WebSearchMcpServer {
   private server: McpServer;
   private isShuttingDown: boolean;
 
   constructor() {
     this.server = new McpServer({
-      name: 'google-search-mcp',
+      name: 'web-search',
       version: '1.0.0',
     });
 
@@ -55,11 +56,11 @@ class GoogleSearchMcpServer {
       }
     );
 
-    // Extract tool
+    // View URL tool
     this.server.tool(
-      'extract',
+      'view_url',
       {
-        url: z.string().describe('URL to extract content from'),
+        url: z.string().describe('URL to view content from'),
         includeImages: z.boolean().optional().describe('Include image metadata'),
         includeVideos: z.boolean().optional().describe('Include video metadata'),
         preserveLinks: z.boolean().optional().describe('Preserve links in markdown'),
@@ -74,12 +75,12 @@ class GoogleSearchMcpServer {
         }
 
         try {
-          const results = await extractionService.extract(params);
+          const results = await viewUrlService.view(params);
           return {
             content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
           };
         } catch (error) {
-          logger.error('Extraction error:', error instanceof Error ? error : { message: String(error) });
+          logger.error('View URL error:', error instanceof Error ? error : { message: String(error) });
           return {
             content: [{ type: 'text', text: error instanceof Error ? error.message : 'Unknown error' }],
             isError: true,
@@ -98,7 +99,7 @@ class GoogleSearchMcpServer {
 
       // Connect to transport
       await this.server.connect(transport);
-      logger.info('Google Search MCP server started');
+      logger.info('Web Search MCP server started');
 
       // Handle shutdown signals
       const cleanup = async (signal: string): Promise<void> => {
@@ -137,4 +138,4 @@ class GoogleSearchMcpServer {
   }
 }
 
-export const mcpServer = new GoogleSearchMcpServer();
+export const mcpServer = new WebSearchMcpServer();

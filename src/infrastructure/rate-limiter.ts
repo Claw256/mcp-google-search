@@ -105,8 +105,8 @@ export const searchRateLimiter = new RateLimiter(
   'search'
 );
 
-export const extractionRateLimiter = new RateLimiter(
+export const viewUrlRateLimiter = new RateLimiter(
   parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '60', 10),
   parseInt(process.env['RATE_LIMIT_WINDOW'] || '60000', 10),
-  'extraction'
+  'view-url'
 );

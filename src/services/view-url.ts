@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { Browser, Page } from 'rebrowser-puppeteer';
 import TurndownService from 'turndown';
-import type { ExtractionParams, ExtractionResult, ImageMetadata, VideoMetadata, PageMetadata } from '../types';
-import { ExtractionError, RateLimitError } from '../types';
+import type { ViewUrlParams, ViewUrlResult, ImageMetadata, VideoMetadata, PageMetadata } from '../types';
+import { ViewUrlError, RateLimitError } from '../types';
 import { logger } from '../infrastructure/logger';
 import { load } from 'cheerio';
 import { browserPool } from '../infrastructure/connection-pool';
-import { extractionCache } from '../infrastructure/cache-manager';
-import { extractionRateLimiter } from '../infrastructure/rate-limiter';
+import { viewUrlCache } from '../infrastructure/cache-manager';
+import { viewUrlRateLimiter } from '../infrastructure/rate-limiter';
 import { getStealthScript } from '../utils/stealth-scripts';
 import { getBrowserLaunchOptions } from '../utils/browser-config';
 import { existsSync, readFileSync } from 'fs';
@@ -24,7 +24,7 @@ interface Cookie {
   sameSite?: 'Strict' | 'Lax' | 'None';
 }
 
-class ExtractionService {
+class ViewUrlService {
   private readonly turndown: TurndownService;
   private _currentUrl?: string;
   private readonly MIN_IMAGE_DIMENSION = 200;
@@ -225,17 +225,17 @@ class ExtractionService {
     return $.html();
   }
 
-  public async extract(params: ExtractionParams): Promise<ExtractionResult> {
+  public async view(params: ViewUrlParams): Promise<ViewUrlResult> {
     this._currentUrl = params.url;
     const cacheKey = JSON.stringify(params);
-    const cachedResult = extractionCache.get<ExtractionResult>(cacheKey);
+    const cachedResult = viewUrlCache.get<ViewUrlResult>(cacheKey);
 
     if (cachedResult) {
-      logger.debug('Returning cached extraction result', { url: params.url });
+      logger.debug('Returning cached view result', { url: params.url });
       return cachedResult;
     }
 
-    if (!extractionRateLimiter.acquire(params.url)) {
+    if (!viewUrlRateLimiter.acquire(params.url)) {
       throw new RateLimitError();
     }
 
@@ -263,12 +263,12 @@ class ExtractionService {
         });
 
         if (!response) {
-          throw new ExtractionError('Failed to get response from page');
+          throw new ViewUrlError('Failed to get response from page');
         }
 
         const status = response.status();
         if (status >= 400) {
-          throw new ExtractionError(`HTTP error: ${status}`);
+          throw new ViewUrlError(`HTTP error: ${status}`);
         }
 
         // Wait for content
@@ -302,11 +302,11 @@ class ExtractionService {
         ]);
 
         const result = { markdown, images, videos, metadata };
-        extractionCache.set(cacheKey, result);
+        viewUrlCache.set(cacheKey, result);
 
         return result;
       } catch (error) {
-        logger.error('Extraction error:', error instanceof Error ? error : { message: String(error) });
+        logger.error('View error:', error instanceof Error ? error : { message: String(error) });
         
         const errorMessage = error instanceof Error ? error.message : String(error);
         const botDetectionPatterns = [
@@ -336,11 +336,11 @@ class ExtractionService {
         }
 
         if (isBotDetection) {
-          throw new ExtractionError('Bot detection triggered - please try again later');
+          throw new ViewUrlError('Bot detection triggered - please try again later');
         }
         
-        throw new ExtractionError(
-          error instanceof Error ? error.message : 'Unknown extraction error'
+        throw new ViewUrlError(
+          error instanceof Error ? error.message : 'Unknown view error'
         );
       } finally {
         try {
@@ -359,7 +359,7 @@ class ExtractionService {
       }
     }
 
-    throw new ExtractionError('Maximum retry attempts exceeded');
+    throw new ViewUrlError('Maximum retry attempts exceeded');
   }
 
 
@@ -410,4 +410,4 @@ class ExtractionService {
   }
 }
 
-export const extractionService = new ExtractionService();
+export const viewUrlService = new ViewUrlService();

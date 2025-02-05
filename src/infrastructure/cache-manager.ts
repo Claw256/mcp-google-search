@@ -88,7 +88,7 @@ export const searchCache = new CacheManager({
   maxKeys: 1000,
 });
 
-export const extractionCache = new CacheManager({
+export const viewUrlCache = new CacheManager({
   ttl: 7200, // 2 hours
   maxKeys: 500,
 });
